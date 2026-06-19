@@ -1,0 +1,46 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: tag
+        run: |
+          latest=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+
+          major=$(echo $latest | cut -d. -f1 | sed 's/v//')
+          minor=$(echo $latest | cut -d. -f2)
+          patch=$(echo $latest | cut -d. -f3)
+
+          patch=$((patch + 1))
+
+          newtag="v${major}.${minor}.${patch}"
+
+          echo "NEW_TAG=$newtag" >> $GITHUB_ENV
+
+      - name: Create tag
+        run: |
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create $NEW_TAG \
+            --title "$NEW_TAG" \
+            --notes "Automatic release"
