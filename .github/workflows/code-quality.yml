@@ -1,0 +1,27 @@
+name: Code Quality
+
+on:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install tools
+        run: |
+          pip install pycodestyle
+
+      - name: Run pycodestyle
+        run: |
+          pycodestyle calculator.py quality_check.py
+
+      - name: Run quality checks
+        run: |
+          python quality_check.py
