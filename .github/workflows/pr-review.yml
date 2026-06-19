@@ -1,0 +1,69 @@
+name: PR Review Bot
+
+on:
+  pull_request:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      issues: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect statistics
+        id: stats
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+
+          FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | wc -l)
+
+          ADDED=$(git diff --numstat origin/${{ github.event.pull_request.base.ref }}...HEAD | awk '{a+=$1} END {print a+0}')
+
+          REMOVED=$(git diff --numstat origin/${{ github.event.pull_request.base.ref }}...HEAD | awk '{a+=$2} END {print a+0}')
+
+          TODOS=$(grep -R -n "TODO\|FIXME" . || true)
+
+          echo "FILES=$FILES" >> $GITHUB_ENV
+          echo "ADDED=$ADDED" >> $GITHUB_ENV
+          echo "REMOVED=$REMOVED" >> $GITHUB_ENV
+
+          {
+            echo "TODOS<<EOF"
+            echo "$TODOS"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+      - name: Create Comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = `
+            ## Automated Review Summary
+
+            Files Changed: ${process.env.FILES}
+
+            Lines Added: ${process.env.ADDED}
+
+            Lines Removed: ${process.env.REMOVED}
+
+            ### TODO / FIXME
+
+            \`\`\`
+            ${process.env.TODOS}
+            \`\`\`
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
