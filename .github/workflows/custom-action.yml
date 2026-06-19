@@ -1,0 +1,17 @@
+name: Custom Action Test
+
+on:
+  push:
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run custom Verilator action
+        uses: Dharshantech17/verilator-lint-action@v1
+        with:
+          files: "example.sv"
+          severity: warning
